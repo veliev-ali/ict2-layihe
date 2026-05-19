@@ -274,8 +274,11 @@
     text-align: center;
     transition: all var(--transition);
   }
-  .dropzone.has-file .clear-btn { display: block; }
-  .dropzone .clear-btn:hover { background: var(--red); color: #fff; }
+  .dropzone.is-only {
+    min-height: 170px;
+    padding: 40px 16px;
+  }
+  .dropzone.is-only .dz-icon svg { width: 48px; height: 48px; }
 
   /* ── BUTTON ── */
   .btn-compare {
@@ -831,9 +834,8 @@
     dom.dzHintA.textContent = hintMap[modality];
     dom.dzHintB.textContent = hintMap[modality];
 
-    // reset inputs
-    clearAll();
-    hideResult();
+    // show correct inputs for this modality
+    updateInputUI();
   }
 
   /* ── TEXT MODE TOGGLE ── */
@@ -848,6 +850,7 @@
   function updateInputUI() {
     var isText = state.modality === 'text';
     var isPaste = isText && state.mode === 'paste';
+    var isOnly = !isText;
 
     // textareas
     dom.textareaA.classList.toggle('hidden', !isPaste);
@@ -858,8 +861,9 @@
     // dropzones
     dom.dropzoneA.classList.toggle('hidden', isPaste);
     dom.dropzoneB.classList.toggle('hidden', isPaste);
+    dom.dropzoneA.classList.toggle('is-only', isOnly);
+    dom.dropzoneB.classList.toggle('is-only', isOnly);
 
-    // vs badge always shows
     clearAll();
     hideResult();
   }
@@ -1056,8 +1060,6 @@
 
   /* ── INIT ── */
   setModality('text');
-  state.mode = 'paste';
-  updateInputUI();
   window.addEventListener('resize', repositionPillIndicator);
 })();
 </script>
