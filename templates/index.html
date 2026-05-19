@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Resemblance Checker</title>
+<style>
+  :root {
+    --bg-deep: #0a1628;
+    --bg-card: #112240;
+    --border: #1d3461;
+    --text: #ccd6f6;
+    --muted: #8892b0;
+    --accent: #4a7cf7;
+    --accent-hover: #5b8afb;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --red: #ef4444;
+    --radius: 12px;
+    --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-deep);
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  /* ── scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-deep); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    height: 50vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+    background: linear-gradient(135deg, #0a1628 0%, #0f2044 40%, #0a1628 100%);
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(74,124,247,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(124,58,237,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 80%, rgba(34,197,94,0.04) 0%, transparent 50%);
+  }
+
+  /* css-only particles */
+  .particles { position: absolute; inset: 0; pointer-events: none; }
+  .particle {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0;
+    animation: floatUp linear infinite;
+  }
+  .particle:nth-child(1) { width:3px;height:3px; left:10%; animation-duration:8s; animation-delay:0s; }
+  .particle:nth-child(2) { width:4px;height:4px; left:25%; animation-duration:12s; animation-delay:2s; background:rgba(124,58,237,0.7); }
+  .particle:nth-child(3) { width:2px;height:2px; left:40%; animation-duration:7s; animation-delay:4s; }
+  .particle:nth-child(4) { width:5px;height:5px; left:55%; animation-duration:10s; animation-delay:1s; background:rgba(34,197,94,0.7); }
+  .particle:nth-child(5) { width:3px;height:3px; left:70%; animation-duration:9s; animation-delay:3s; }
+  .particle:nth-child(6) { width:4px;height:4px; left:85%; animation-duration:11s; animation-delay:5s; background:rgba(124,58,237,0.7); }
+  .particle:nth-child(7) { width:2px;height:2px; left:15%; animation-duration:8s; animation-delay:6s; }
+  .particle:nth-child(8) { width:4px;height:4px; left:35%; animation-duration:13s; animation-delay:3.5s; background:rgba(34,197,94,0.6); }
+  .particle:nth-child(9) { width:3px;height:3px; left:60%; animation-duration:9s; animation-delay:7s; }
+  .particle:nth-child(10){ width:2px;height:2px; left:78%; animation-duration:10s; animation-delay:1.5s; }
+
+  @keyframes floatUp {
+    0%   { transform: translateY(110%) translateX(0) scale(0); opacity:0; }
+    10%  { opacity:1; }
+    50%  { opacity:0.8; }
+    90%  { opacity:0; }
+    100% { transform: translateY(-10%) translateX(80px) scale(1.5); opacity:0; }
+  }
+
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    color: #fff;
+    z-index: 1;
+    animation: fadeInUp 0.8s ease both;
+    letter-spacing: -0.02em;
+  }
+  .hero h1 span { background: linear-gradient(135deg, var(--accent), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+  .hero .subtitle {
+    margin-top: 16px;
+    font-size: 1.1rem;
+    color: var(--muted);
+    max-width: 500px;
+    z-index: 1;
+    animation: fadeInUp 0.8s 0.2s ease both;
+  }
+
+  .hero .scroll-hint {
+    position: absolute;
+    bottom: 40px;
+    z-index: 1;
+    animation: fadeInUp 0.8s 0.6s ease both, bounceDown 2s ease-in-out infinite;
+  }
+  .hero .scroll-hint svg { display: block; stroke: var(--muted); }
+
+  @keyframes fadeInUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes bounceDown { 0%,100% { transform:translateY(0); } 50% { transform:translateY(10px); } }
+
+  /* ── LAYOUT ── */
+  .main { max-width: 817px; margin: 0 auto; padding: 60px 24px 80px; }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 24px;
+    backdrop-filter: blur(10px);
+    animation: fadeInUp 0.5s ease both;
+  }
+  .card:nth-child(2) { animation-delay: 0.1s; }
+  .card:nth-child(3) { animation-delay: 0.2s; }
+  .card:nth-child(4) { animation-delay: 0.3s; }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .card-header h3 { font-size: 1rem; font-weight: 600; color: var(--text); }
+
+  /* ── MODALITY PILLS ── */
+  .pills {
+    display: flex;
+    gap: 4px;
+    background: var(--bg-deep);
+    border-radius: 999px;
+    padding: 4px;
+    position: relative;
+    border: 1px solid var(--border);
+  }
+  .pill {
+    flex: 1;
+    padding: 10px 24px;
+    border-radius: 999px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+    transition: color var(--transition);
+    white-space: nowrap;
+    text-align: center;
+  }
+  .pill.active { color: #fff; }
+  .pill-indicator {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: left 0.3s cubic-bezier(0.4,0,0.2,1), width 0.3s cubic-bezier(0.4,0,0.2,1);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ── TOGGLE (text mode) ── */
+  .mode-toggle {
+    display: flex;
+    gap: 4px;
+    background: var(--bg-deep);
+    border-radius: 999px;
+    padding: 4px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .mode-btn.active { background: var(--accent); color: #fff; }
+
+  /* ── INPUT ROW ── */
+  .input-row-wrap { position: relative; }
+  .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 640px) { .input-row { grid-template-columns: 1fr; } }
+
+  .input-group label { display: block; font-size: 0.8rem; font-weight: 500; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .input-group textarea {
+    width: 100%;
+    min-height: 133px;
+    padding: 14px 16px;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 0.9rem;
+    font-family: inherit;
+    resize: vertical;
+    outline: none;
+    transition: border-color var(--transition);
+  }
+  .input-group textarea:focus { border-color: var(--accent); }
+  .input-group .char-count { font-size: 0.75rem; color: var(--muted); margin-top: 4px; text-align: right; }
+
+  /* ── DROPZONE ── */
+  .dropzone {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all var(--transition);
+    background: var(--bg-deep);
+    min-height: 133px;
+  }
+  .dropzone:hover, .dropzone.drag-over { border-color: var(--accent); background: rgba(74,124,247,0.05); }
+  .dropzone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .dropzone .dz-icon { margin-bottom: 8px; opacity: 0.5; }
+  .dropzone .dz-text { font-size: 0.85rem; color: var(--muted); }
+  .dropzone .dz-hint { font-size: 0.75rem; color: var(--muted); opacity: 0.6; margin-top: 4px; }
+
+  .dropzone .preview {
+    display: none;
+    text-align: center;
+    width: 100%;
+  }
+  .dropzone.has-file .dz-icon,
+  .dropzone.has-file .dz-text,
+  .dropzone.has-file .dz-hint { display: none; }
+  .dropzone.has-file .preview { display: block; }
+  .dropzone .preview img { max-width: 100%; max-height: 100px; border-radius: 8px; margin-bottom: 8px; }
+  .dropzone .preview .file-name { font-size: 0.8rem; color: var(--text); word-break: break-all; }
+  .dropzone .preview .file-meta { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+  .dropzone .clear-btn {
+    display: none;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: var(--border);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.8rem;
+    line-height: 28px;
+    text-align: center;
+    transition: all var(--transition);
+  }
+  .dropzone.has-file .clear-btn { display: block; }
+  .dropzone .clear-btn:hover { background: var(--red); color: #fff; }
+
+  /* ── BUTTON ── */
+  .btn-compare {
+    display: block;
+    width: 100%;
+    max-width: 320px;
+    margin: 32px auto 0;
+    padding: 14px 32px;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--accent), #6366f1);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-compare:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(74,124,247,0.3); }
+  .btn-compare:active { transform: scale(0.97); }
+  .btn-compare:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .btn-compare .spinner-icon {
+    display: none;
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  .btn-compare.loading .btn-text { display: none; }
+  .btn-compare.loading .spinner-icon { display: inline-block; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── RESULT ── */
+  .result-card { display: none; text-align: center; }
+  .result-card.visible { display: block; animation: fadeInUp 0.4s ease both; }
+  .result-card.error-state { animation: shake 0.5s ease both; }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    10%,50%,90% { transform: translateX(-6px); }
+    30%,70% { transform: translateX(6px); }
+  }
+
+  .gauge-wrap { position: relative; display: inline-block; margin: 16px 0; }
+  .gauge-wrap svg { width: 160px; height: 160px; }
+  .gauge-value {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .gauge-value .percent { font-size: 2rem; font-weight: 700; color: #fff; }
+  .gauge-value .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+
+  .result-detail { margin-top: 12px; font-size: 0.9rem; color: var(--muted); }
+
+  .legend { display: flex; justify-content: center; gap: 12px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  /* ── SIDEBAR ── */
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition);
+  }
+  .sidebar-overlay.open { opacity: 1; pointer-events: auto; }
+
+  .sidebar {
+    position: fixed;
+    top: 0; right: 0;
+    width: 360px;
+    max-width: 90vw;
+    height: 100vh;
+    background: var(--bg-card);
+    border-left: 1px solid var(--border);
+    z-index: 101;
+    transform: translateX(100%);
+    transition: transform var(--transition);
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+  }
+  .sidebar.open { transform: translateX(0); }
+
+  .sidebar h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; }
+  .sidebar .close-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.3rem; padding: 4px 8px; border-radius: 6px; transition: all var(--transition); }
+  .sidebar .close-btn:hover { background: var(--border); color: #fff; }
+
+  .history-list { flex: 1; overflow-y: auto; }
+  .history-item {
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .history-item:hover { border-color: var(--accent); background: rgba(74,124,247,0.05); }
+  .history-item .hi-left { flex: 1; min-width: 0; }
+  .history-item .hi-names { font-size: 0.8rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .history-item .hi-meta { font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
+  .history-item .hi-score { font-size: 1.1rem; font-weight: 700; margin-left: 12px; white-space: nowrap; }
+  .history-empty { text-align: center; color: var(--muted); font-size: 0.85rem; margin-top: 40px; }
+
+  .clear-history-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    margin-top: 12px;
+    transition: all var(--transition);
+  }
+  .clear-history-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── HEADER BAR ── */
+  .topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 20px 28px;
+    gap: 12px;
+    pointer-events: none;
+  }
+  .topbar button { pointer-events: auto; }
+  .topbar .icon-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--accent);
+    background: var(--bg-card);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  }
+  .topbar .icon-btn:hover {
+    border-color: var(--accent-hover);
+    color: #fff;
+    background: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(74, 124, 247, 0.4);
+  }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition);
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: auto; }
+
+  .modal {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    max-width: 480px;
+    width: 90vw;
+    max-height: 80vh;
+    overflow-y: auto;
+    transform: translateY(20px);
+    transition: transform var(--transition);
+    animation: modalIn 0.3s ease both;
+  }
+  @keyframes modalIn { from { transform: translateY(20px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+
+  .modal h3 { margin-bottom: 16px; font-size: 1.1rem; }
+  .modal p { font-size: 0.9rem; color: var(--muted); line-height: 1.6; margin-bottom: 12px; }
+  .modal code { background: var(--bg-deep); padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; color: var(--accent); }
+  .modal .close-modal {
+    margin-top: 16px;
+    padding: 10px 24px;
+    border-radius: 999px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all var(--transition);
+  }
+  .modal .close-modal:hover { background: var(--accent-hover); }
+
+  /* ── UTILS ── */
+  .vs-badge {
+    position: absolute;
+    top: calc(50% + 12px);
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    pointer-events: none;
+  }
+  @media (max-width: 640px) {
+    .vs-badge { display: none; }
+  }
+  .vs-badge span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--border);
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR OVERLAY ═══ -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="sidebar" id="sidebar">
+  <h3>
+    Recent Comparisons
+    <button class="close-btn" id="sidebarClose">&times;</button>
+  </h3>
+  <div class="history-list" id="historyList">
+    <div class="history-empty">No comparisons yet</div>
+  </div>
+  <button class="clear-history-btn" id="clearHistory">Clear history</button>
+</div>
+
+<!-- ═══ MODAL ═══ -->
+<div class="modal-overlay" id="infoModalOverlay">
+  <div class="modal">
+    <h3 id="modalTitle">How it works</h3>
+    <div id="modalBody"></div>
+    <button class="close-modal" id="closeModal">Got it</button>
+  </div>
+</div>
+
+<!-- ═══ TOPBAR ═══ -->
+<div class="topbar">
+  <button class="icon-btn" id="btnInfo" title="How it works">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+  </button>
+  <button class="icon-btn" id="btnHistory" title="History">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+  </button>
+</div>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero" id="hero">
+  <div class="particles">
+    <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div>
+  </div>
+  <h1>Data <span>Resemblance</span> Checker</h1>
+  <p class="subtitle">Compare text, images, and audio using cosine similarity — see how alike two datasets really are.</p>
+  <div class="scroll-hint">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/></svg>
+  </div>
+</section>
+
+<!-- ═══ MAIN ═══ -->
+<section class="main" id="main">
+
+  <!-- MODALITY -->
+  <div class="card">
+    <div class="pills" id="pills">
+      <div class="pill-indicator pos1" id="pillIndicator"></div>
+      <button class="pill active" data-modality="text">Text</button>
+      <button class="pill" data-modality="image">Image</button>
+      <button class="pill" data-modality="audio">Audio</button>
+    </div>
+  </div>
+
+  <!-- INPUTS -->
+  <div class="card" id="inputCard">
+    <!-- TEXT MODE TOGGLE -->
+    <div class="mode-toggle hidden" id="textModeToggle">
+      <button class="mode-btn active" data-mode="paste">Paste Text</button>
+      <button class="mode-btn" data-mode="upload">Upload Files</button>
+    </div>
+
+    <div class="input-row-wrap">
+      <div class="vs-badge"><span>VS</span></div>
+      <div class="input-row">
+        <!-- Input A -->
+        <div class="input-group" id="inputGroupA">
+          <label id="labelA">File 1</label>
+          <textarea id="textareaA" class="hidden" placeholder="Type or paste text here&hellip;"></textarea>
+          <div class="char-count hidden" id="charCountA">0 chars</div>
+          <div class="dropzone" id="dropzoneA">
+            <input type="file" id="fileA">
+            <div class="dz-icon">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div class="dz-text">Choose a file or drag it here</div>
+            <div class="dz-hint" id="dzHintA">Supported: .txt, .csv, .md, .json</div>
+            <div class="preview">
+              <img id="previewImgA" src="" alt="">
+              <div class="file-name" id="fileNameA"></div>
+              <div class="file-meta" id="fileMetaA"></div>
+            </div>
+            <button class="clear-btn" id="clearA">&times;</button>
+          </div>
+        </div>
+        <!-- Input B -->
+        <div class="input-group" id="inputGroupB">
+          <label id="labelB">File 2</label>
+          <textarea id="textareaB" class="hidden" placeholder="Type or paste text here&hellip;"></textarea>
+          <div class="char-count hidden" id="charCountB">0 chars</div>
+          <div class="dropzone" id="dropzoneB">
+            <input type="file" id="fileB">
+            <div class="dz-icon">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div class="dz-text">Choose a file or drag it here</div>
+            <div class="dz-hint" id="dzHintB">Supported: .txt, .csv, .md, .json</div>
+            <div class="preview">
+              <img id="previewImgB" src="" alt="">
+              <div class="file-name" id="fileNameB"></div>
+              <div class="file-meta" id="fileMetaB"></div>
+            </div>
+            <button class="clear-btn" id="clearB">&times;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-compare" id="btnCompare">
+      <span class="spinner-icon"></span>
+      <span class="btn-text">Compare</span>
+    </button>
+  </div>
+
+  <!-- RESULT -->
+  <div class="card result-card" id="resultCard">
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 120 120" id="gaugeSvg">
+        <circle cx="60" cy="60" r="52" fill="none" stroke="#1d3461" stroke-width="8"/>
+        <circle cx="60" cy="60" r="52" fill="none" stroke="#22c55e" stroke-width="8"
+                stroke-linecap="round" stroke-dasharray="326.73" stroke-dashoffset="326.73"
+                transform="rotate(-90 60 60)" id="gaugeArc"/>
+      </svg>
+      <div class="gauge-value">
+        <span class="percent" id="gaugePercent">0%</span>
+        <span class="label">similarity</span>
+      </div>
+    </div>
+    <div class="result-detail" id="resultDetail"></div>
+    <div class="legend">
+      <div class="legend-item"><span class="legend-swatch" style="background:#991b1b"></span> Very Different</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#ef4444"></span> Different</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#f97316"></span> Moderate</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#eab308"></span> Similar</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#22c55e"></span> Very Similar</div>
+    </div>
+  </div>
+
+</section>
+
+<script>
+(function(){
+  var state = {
+    modality: 'text',
+    mode: 'paste',
+    history: JSON.parse(localStorage.getItem('drHistory') || '[]'),
+    fileA: null,
+    fileB: null
+  };
+
+  var dom = {
+    sidebar: document.getElementById('sidebar'),
+    sidebarOverlay: document.getElementById('sidebarOverlay'),
+    historyList: document.getElementById('historyList'),
+    pills: document.getElementById('pills'),
+    pillIndicator: document.getElementById('pillIndicator'),
+    textModeToggle: document.getElementById('textModeToggle'),
+    inputGroupA: document.getElementById('inputGroupA'),
+    inputGroupB: document.getElementById('inputGroupB'),
+    labelA: document.getElementById('labelA'),
+    labelB: document.getElementById('labelB'),
+    textareaA: document.getElementById('textareaA'),
+    textareaB: document.getElementById('textareaB'),
+    charCountA: document.getElementById('charCountA'),
+    charCountB: document.getElementById('charCountB'),
+    dropzoneA: document.getElementById('dropzoneA'),
+    dropzoneB: document.getElementById('dropzoneB'),
+    fileA: document.getElementById('fileA'),
+    fileB: document.getElementById('fileB'),
+    fileNameA: document.getElementById('fileNameA'),
+    fileNameB: document.getElementById('fileNameB'),
+    fileMetaA: document.getElementById('fileMetaA'),
+    fileMetaB: document.getElementById('fileMetaB'),
+    previewImgA: document.getElementById('previewImgA'),
+    previewImgB: document.getElementById('previewImgB'),
+    clearA: document.getElementById('clearA'),
+    clearB: document.getElementById('clearB'),
+    btnCompare: document.getElementById('btnCompare'),
+    resultCard: document.getElementById('resultCard'),
+    gaugeArc: document.getElementById('gaugeArc'),
+    gaugePercent: document.getElementById('gaugePercent'),
+    resultDetail: document.getElementById('resultDetail'),
+    dzHintA: document.getElementById('dzHintA'),
+    dzHintB: document.getElementById('dzHintB'),
+    infoModalOverlay: document.getElementById('infoModalOverlay'),
+    modalTitle: document.getElementById('modalTitle'),
+    modalBody: document.getElementById('modalBody'),
+    historyEmpty: document.querySelector('.history-empty')
+  };
+
+  var acceptMap = {
+    text: '.txt,.csv,.md,.json,.xml,.html,.css,.js,.py,.log',
+    image: '.png,.jpg,.jpeg,.gif,.bmp,.webp',
+    audio: '.wav,.mp3,.ogg,.flac,.m4a'
+  };
+
+  var hintMap = {
+    text: 'Supported: .txt, .csv, .md, .json, .xml, .html, .py, .js',
+    image: 'Supported: .png, .jpg, .jpeg, .gif, .bmp, .webp',
+    audio: 'Supported: .wav, .mp3, .ogg, .flac, .m4a'
+  };
+
+  var infoText = {
+    text: '<p>Text is vectorized using <strong>TF-IDF</strong> (Term Frequency &times; Inverse Document Frequency). The vectorizer is fit on <em>both</em> documents to share the same vocabulary, then each document is transformed into a sparse numerical vector. <strong>Cosine similarity</strong> measures the angle between these two vectors.</p><p>Result: <code>0%</code> = completely different vocabulary, <code>100%</code> = identical text.</p>',
+    image: '<p>Images are <strong>converted to grayscale</strong>, resized to <strong>64&times;64 pixels</strong>, then flattened into a 1D pixel array. <strong>Cosine similarity</strong> compares the two flattened arrays.</p><p>The resize normalizes different image dimensions. Grayscale removes color bias. <code>0%</code> = opposite pixel patterns, <code>100%</code> = identical images.</p>',
+    audio: '<p>Audio files are processed with <strong>MFCC</strong> (Mel-Frequency Cepstral Coefficients) via <code>librosa</code>. The MFCC matrix is averaged across time to produce a fixed-size feature vector capturing timbral characteristics.</p><p>MFCC mimics human auditory perception. <code>0%</code> = dissimilar timbre/frequency content, <code>100%</code> = identical audio.</p>'
+  };
+
+  /* ── SIDEBAR ── */
+  function openSidebar() {
+    dom.sidebar.classList.add('open');
+    dom.sidebarOverlay.classList.add('open');
+    renderHistory();
+  }
+  function closeSidebar() {
+    dom.sidebar.classList.remove('open');
+    dom.sidebarOverlay.classList.remove('open');
+  }
+  document.getElementById('btnHistory').addEventListener('click', openSidebar);
+  document.getElementById('sidebarClose').addEventListener('click', closeSidebar);
+  dom.sidebarOverlay.addEventListener('click', closeSidebar);
+
+  function addToHistory(modality, nameA, nameB, score) {
+    state.history.unshift({
+      modality: modality,
+      nameA: nameA,
+      nameB: nameB,
+      score: score,
+      time: Date.now()
+    });
+    if (state.history.length > 10) state.history = state.history.slice(0, 10);
+    localStorage.setItem('drHistory', JSON.stringify(state.history));
+  }
+
+  function renderHistory() {
+    if (state.history.length === 0) {
+      dom.historyList.innerHTML = '<div class="history-empty">No comparisons yet</div>';
+      return;
+    }
+    dom.historyList.innerHTML = state.history.map(function(h, i) {
+      var timeStr = new Date(h.time).toLocaleString();
+      var color = scoreColor(h.score);
+      return '<div class="history-item" data-idx="' + i + '">' +
+        '<div class="hi-left"><div class="hi-names">' + esc(h.nameA) + ' vs ' + esc(h.nameB) + '</div><div class="hi-meta">' + esc(h.modality) + ' &middot; ' + timeStr + '</div></div>' +
+        '<div class="hi-score" style="color:' + color + '">' + h.score.toFixed(1) + '%</div></div>';
+    }).join('');
+  }
+
+  document.getElementById('clearHistory').addEventListener('click', function() {
+    state.history = [];
+    localStorage.removeItem('drHistory');
+    renderHistory();
+  });
+
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  /* ── MODAL ── */
+  document.getElementById('btnInfo').addEventListener('click', function() {
+    dom.modalTitle.textContent = 'How ' + state.modality.charAt(0).toUpperCase() + state.modality.slice(1) + ' Comparison Works';
+    dom.modalBody.innerHTML = infoText[state.modality];
+    dom.infoModalOverlay.classList.add('open');
+  });
+  document.getElementById('closeModal').addEventListener('click', function() {
+    dom.infoModalOverlay.classList.remove('open');
+  });
+  dom.infoModalOverlay.addEventListener('click', function(e) {
+    if (e.target === dom.infoModalOverlay) dom.infoModalOverlay.classList.remove('open');
+  });
+
+  /* ── MODALITY PILLS ── */
+  var pillsContainer = document.getElementById('pills');
+  var pillButtons = pillsContainer.querySelectorAll('.pill');
+
+  function repositionPillIndicator() {
+    var active = pillsContainer.querySelector('.pill.active');
+    if (!active) return;
+    var containerRect = pillsContainer.getBoundingClientRect();
+    var pillRect = active.getBoundingClientRect();
+    dom.pillIndicator.style.left = (pillRect.left - containerRect.left) + 'px';
+    dom.pillIndicator.style.width = pillRect.width + 'px';
+  }
+
+  dom.pills.addEventListener('click', function(e) {
+    var pill = e.target.closest('.pill');
+    if (!pill) return;
+    var modality = pill.dataset.modality;
+    setModality(modality);
+  });
+
+  function setModality(modality) {
+    state.modality = modality;
+    dom.pills.querySelectorAll('.pill').forEach(function(p) { p.classList.toggle('active', p.dataset.modality === modality); });
+    repositionPillIndicator();
+
+    // text mode toggle
+    dom.textModeToggle.classList.toggle('hidden', modality !== 'text');
+
+    // labels
+    dom.labelA.textContent = modality === 'text' ? 'Text A' : 'File 1';
+    dom.labelB.textContent = modality === 'text' ? 'Text B' : 'File 2';
+
+    // accept types
+    dom.fileA.accept = acceptMap[modality];
+    dom.fileB.accept = acceptMap[modality];
+    dom.dzHintA.textContent = hintMap[modality];
+    dom.dzHintB.textContent = hintMap[modality];
+
+    // reset inputs
+    clearAll();
+    hideResult();
+  }
+
+  /* ── TEXT MODE TOGGLE ── */
+  dom.textModeToggle.addEventListener('click', function(e) {
+    var btn = e.target.closest('.mode-btn');
+    if (!btn) return;
+    state.mode = btn.dataset.mode;
+    dom.textModeToggle.querySelectorAll('.mode-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.mode === state.mode); });
+    updateInputUI();
+  });
+
+  function updateInputUI() {
+    var isText = state.modality === 'text';
+    var isPaste = isText && state.mode === 'paste';
+
+    // textareas
+    dom.textareaA.classList.toggle('hidden', !isPaste);
+    dom.textareaB.classList.toggle('hidden', !isPaste);
+    dom.charCountA.classList.toggle('hidden', !isPaste);
+    dom.charCountB.classList.toggle('hidden', !isPaste);
+
+    // dropzones
+    dom.dropzoneA.classList.toggle('hidden', isPaste);
+    dom.dropzoneB.classList.toggle('hidden', isPaste);
+
+    // vs badge always shows
+    clearAll();
+    hideResult();
+  }
+
+  /* ── TEXTAREA CHAR COUNT ── */
+  dom.textareaA.addEventListener('input', function() {
+    dom.charCountA.textContent = this.value.length + ' chars';
+  });
+  dom.textareaB.addEventListener('input', function() {
+    dom.charCountB.textContent = this.value.length + ' chars';
+  });
+
+  /* ── DROPZONE ── */
+  function setupDropzone(dz, fileInput, nameEl, metaEl, previewImgEl, clearBtn) {
+    fileInput.addEventListener('change', function() { onFileSelect(fileInput, nameEl, metaEl, previewImgEl, dz); });
+
+    dz.addEventListener('dragover', function(e) { e.preventDefault(); dz.classList.add('drag-over'); });
+    dz.addEventListener('dragleave', function() { dz.classList.remove('drag-over'); });
+    dz.addEventListener('drop', function(e) {
+      e.preventDefault();
+      dz.classList.remove('drag-over');
+      var files = e.dataTransfer.files;
+      if (files.length) {
+        fileInput.files = files;
+        onFileSelect(fileInput, nameEl, metaEl, previewImgEl, dz);
+      }
+    });
+
+    // click on clear btn
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        fileInput.value = '';
+        dz.classList.remove('has-file');
+        nameEl.textContent = '';
+        metaEl.textContent = '';
+        if (previewImgEl) previewImgEl.src = '';
+        hideResult();
+      });
+    }
+  }
+
+  function onFileSelect(input, nameEl, metaEl, previewImgEl, dz) {
+    var file = input.files[0];
+    if (!file) return;
+    dz.classList.add('has-file');
+    nameEl.textContent = file.name;
+    var sizeStr = file.size < 1024 ? file.size + ' B' : file.size < 1048576 ? (file.size/1024).toFixed(1) + ' KB' : (file.size/1048576).toFixed(1) + ' MB';
+    metaEl.textContent = sizeStr;
+
+    if (state.modality === 'image' && previewImgEl) {
+      var reader = new FileReader();
+      reader.onload = function(e) { previewImgEl.src = e.target.result; };
+      reader.readAsDataURL(file);
+    }
+    hideResult();
+  }
+
+  setupDropzone(dom.dropzoneA, dom.fileA, dom.fileNameA, dom.fileMetaA, dom.previewImgA, dom.clearA);
+  setupDropzone(dom.dropzoneB, dom.fileB, dom.fileNameB, dom.fileMetaB, dom.previewImgB, dom.clearB);
+
+  function clearAll() {
+    [dom.fileA, dom.fileB].forEach(function(f) { f.value = ''; });
+    [dom.dropzoneA, dom.dropzoneB].forEach(function(d) { d.classList.remove('has-file'); });
+    [dom.fileNameA, dom.fileNameB, dom.fileMetaA, dom.fileMetaB].forEach(function(el) { el.textContent = ''; });
+    if (dom.previewImgA) dom.previewImgA.src = '';
+    if (dom.previewImgB) dom.previewImgB.src = '';
+    dom.textareaA.value = '';
+    dom.textareaB.value = '';
+    dom.charCountA.textContent = '0 chars';
+    dom.charCountB.textContent = '0 chars';
+    state.fileA = null;
+    state.fileB = null;
+  }
+
+  /* ── COMPARE ── */
+  dom.btnCompare.addEventListener('click', function() { doCompare(); });
+
+  function doCompare() {
+    hideResult();
+
+    var formData = new FormData();
+    formData.append('modality', state.modality);
+
+    var isPaste = state.modality === 'text' && state.mode === 'paste';
+
+    if (isPaste) {
+      var ta = dom.textareaA.value.trim();
+      var tb = dom.textareaB.value.trim();
+      if (!ta || !tb) { showError('Both text fields must be filled'); return; }
+      formData.append('file1', new Blob([ta], {type:'text/plain'}), 'text_a.txt');
+      formData.append('file2', new Blob([tb], {type:'text/plain'}), 'text_b.txt');
+      state.fileA = 'text_a.txt';
+      state.fileB = 'text_b.txt';
+    } else {
+      if (!dom.fileA.files.length || !dom.fileB.files.length) { showError('Both files must be selected'); return; }
+      formData.append('file1', dom.fileA.files[0]);
+      formData.append('file2', dom.fileB.files[0]);
+      state.fileA = dom.fileA.files[0].name;
+      state.fileB = dom.fileB.files[0].name;
+    }
+
+    dom.btnCompare.classList.add('loading');
+    dom.btnCompare.disabled = true;
+
+    fetch('/compare', { method: 'POST', body: formData })
+      .then(function(r) { return r.json().then(function(j) { return {status: r.status, json: j}; }); })
+      .then(function(res) {
+        dom.btnCompare.classList.remove('loading');
+        dom.btnCompare.disabled = false;
+        if (res.status === 200) {
+          showResult(res.json.similarity);
+          addToHistory(state.modality, state.fileA, state.fileB, res.json.similarity);
+        } else {
+          showError(res.json.error || 'Unknown error');
+        }
+      })
+      .catch(function() {
+        dom.btnCompare.classList.remove('loading');
+        dom.btnCompare.disabled = false;
+        showError('Network error — is the server running?');
+      });
+  }
+
+  /* ── RESULT ── */
+  function hideResult() {
+    dom.resultCard.classList.remove('visible', 'error-state');
+    dom.gaugeArc.style.strokeDashoffset = '326.73';
+    dom.gaugePercent.textContent = '0%';
+    dom.resultDetail.textContent = '';
+  }
+
+  function showResult(score) {
+    dom.resultCard.classList.remove('error-state');
+    dom.resultCard.classList.add('visible');
+    animateGauge(score);
+  }
+
+  function showError(msg) {
+    dom.resultCard.classList.remove('visible');
+    dom.resultCard.classList.add('visible', 'error-state');
+    dom.gaugePercent.textContent = 'Error';
+    dom.resultDetail.textContent = msg;
+    dom.gaugeArc.style.strokeDashoffset = '326.73';
+  }
+
+  function scoreColor(score) {
+    if (score <= 20) return '#22c55e';
+    if (score <= 40) return '#eab308';
+    if (score <= 60) return '#f97316';
+    if (score <= 80) return '#ef4444';
+    return '#991b1b';
+  }
+
+  function scoreLabel(score) {
+    if (score <= 20) return 'Very Different';
+    if (score <= 40) return 'Different';
+    if (score <= 60) return 'Moderate';
+    if (score <= 80) return 'Similar';
+    return 'Very Similar';
+  }
+
+  function animateGauge(target) {
+    var circumference = 326.73;
+    var offset = circumference - (target / 100) * circumference;
+    var color = scoreColor(target);
+
+    dom.gaugeArc.style.transition = 'none';
+    dom.gaugeArc.style.strokeDashoffset = circumference;
+    dom.gaugeArc.style.stroke = '#1d3461';
+
+    requestAnimationFrame(function() {
+      dom.gaugeArc.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1), stroke 1.2s ease';
+      dom.gaugeArc.style.strokeDashoffset = offset;
+      dom.gaugeArc.style.stroke = color;
+    });
+
+    // count-up
+    var start = 0;
+    var duration = 1200;
+    var startTime = performance.now();
+    function step(now) {
+      var progress = Math.min((now - startTime) / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      var val = start + (target - start) * eased;
+      dom.gaugePercent.textContent = val.toFixed(1) + '%';
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+
+    dom.resultDetail.textContent = scoreLabel(target);
+  }
+
+  /* ── INIT ── */
+  setModality('text');
+  state.mode = 'paste';
+  updateInputUI();
+  window.addEventListener('resize', repositionPillIndicator);
+})();
+</script>
+</body>
+</html>
